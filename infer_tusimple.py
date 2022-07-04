@@ -11,7 +11,7 @@ from sklearn.metrics import accuracy_score, f1_score
 import torch
 from torch.utils.data import DataLoader
 
-from datasets.tusimple import TuSimple, get_lanes_tusimple
+from datasets.tusimple import TuSimple, get_lanes_tusimple, generate_labels
 from models.dla.pose_dla_dcn import get_pose_net
 from models.erfnet.erfnet import ERFNet
 from models.enet.ENet import ENet
@@ -24,7 +24,8 @@ parser = argparse.ArgumentParser('Options for inference with LaneAF models in Py
 parser.add_argument('--dataset-dir', type=str, default=None, help='path to dataset')
 parser.add_argument('--output-dir', type=str, default=None, help='output directory for model and logs')
 parser.add_argument('--snapshot', type=str, default=None, help='path to pre-trained model snapshot')
-parser.add_argument('--split', type=str, default='test', help='dataset split to evaluate on (train/val/test)')
+parser.add_argument('--split', type=str, default='test', help='dataset split to evaluate on (train/val/test/manual)')
+parser.add_argument('--manual-path', type=str, default='test', help='path for manual test dataset')
 parser.add_argument('--seed', type=int, default=1, help='set seed to some constant value to reproduce experiments')
 parser.add_argument('--no-cuda', action='store_true', default=False, help='do not use cuda for training')
 parser.add_argument('--save-viz', action='store_true', default=False, help='save visualization depicting intermediate and final results')
@@ -52,11 +53,14 @@ if not os.path.exists(args.output_dir):
 else:
     assert False, 'Output directory already exists!'
 
+print(os.path.join(os.path.dirname(args.snapshot), 'config.json'))
 # load args used from training snapshot (if available)
 if os.path.exists(os.path.join(os.path.dirname(args.snapshot), 'config.json')):
     with open(os.path.join(os.path.dirname(args.snapshot), 'config.json')) as f:
         json_args = json.load(f)
     # augment infer args with training args for model consistency
+    print('Loading training args from snapshot...')
+    print(json_args)
     if 'backbone' in json_args.keys():
         args.backbone = json_args['backbone']
     else:
@@ -72,7 +76,7 @@ if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
 kwargs = {'batch_size': args.batch_size, 'shuffle': False, 'num_workers': 1}
-test_loader = DataLoader(TuSimple(args.dataset_dir, args.split, False), **kwargs)
+test_loader = DataLoader(TuSimple(args.dataset_dir, args.split if args.split != 'manual' else 'test' , False), **kwargs)
 
 
 # test function
@@ -125,12 +129,15 @@ def test(net):
             f.write('\n')
 
         # create video visualization
-        if args.save_viz:
+        if True:
+            print('Creating video visualization...')
             img_out = create_viz(img, seg_out.astype(np.uint8), mask_out, vaf_out, haf_out)
 
             if out_vid is None:
-                out_vid = cv2.VideoWriter(os.path.join(args.output_dir, 'out.mkv'), 
-                    cv2.VideoWriter_fourcc(*'H264'), 5, (img_out.shape[1], img_out.shape[0]))
+                print('Creating video...')
+                out_vid = cv2.VideoWriter(os.path.join(args.output_dir, 'out.mp4'), 
+                    cv2.VideoWriter_fourcc(*'mp4v'), 5, (img_out.shape[1], img_out.shape[0]))
+            print('Writing frame...')
             out_vid.write(img_out)
 
         print('Done with image {} out of {}...'.format(min(args.batch_size*(b_idx+1), len(test_loader.dataset)), len(test_loader.dataset)))
@@ -140,7 +147,86 @@ def test(net):
     with open(os.path.join(args.output_dir, 'results.json'), 'w') as f:
         json.dump(results, f)
 
-    if args.save_viz:
+    if True:
+        out_vid.release()
+
+    return
+
+
+# manual test function
+def testManual(net):
+    net.eval()
+    out_vid = None
+    print("Generate labels for manual  test started.")
+    generate_labels(args.manual_path,True)
+    print("Generate labels for manual  test finished.")
+
+    json_pred = [json.loads(line) for line in open(os.path.join(args.manual_path, 'seg_label', 'test.json')).readlines()]
+    test_loader2 = DataLoader(TuSimple(args.manual_path, 'test', False), **kwargs)
+    for b_idx, sample in enumerate(test_loader2):
+        input_img, input_seg, input_mask, input_af = sample
+        if args.cuda:
+            input_img = input_img.cuda()
+            input_seg = input_seg.cuda()
+            input_mask = input_mask.cuda()
+            input_af = input_af.cuda()
+
+        st_time = datetime.now()
+        # do the forward pass
+        outputs = net(input_img)[-1]
+
+        # convert to arrays
+        img = tensor2image(input_img.detach(), np.array(test_loader2.dataset.mean), 
+            np.array(test_loader2.dataset.std))
+        mask_out = tensor2image(torch.sigmoid(outputs['hm']).repeat(1, 3, 1, 1).detach(), 
+            np.array([0.0 for _ in range(3)], dtype='float32'), np.array([1.0 for _ in range(3)], dtype='float32'))
+        vaf_out = np.transpose(outputs['vaf'][0, :, :, :].detach().cpu().float().numpy(), (1, 2, 0))
+        haf_out = np.transpose(outputs['haf'][0, :, :, :].detach().cpu().float().numpy(), (1, 2, 0))
+
+        # decode AFs to get lane instances
+        seg_out = decodeAFs(mask_out[:, :, 0], vaf_out, haf_out, fg_thresh=128, err_thresh=5)
+        ed_time = datetime.now()
+
+        if torch.any(torch.isnan(input_seg)):
+            # if labels are not available, skip this step
+            pass
+        else:
+            # if test set labels are available
+            # re-assign lane IDs to match with ground truth
+            pass
+            # seg_out = match_multi_class(seg_out.astype(np.int64), input_seg[0, 0, :, :].detach().cpu().numpy().astype(np.int64))
+
+        # fill results in output structure
+        json_pred[b_idx]['run_time'] = (ed_time - st_time).total_seconds()*1000.
+        if json_pred[b_idx]['run_time'] > 200:
+            json_pred[b_idx]['run_time'] = 200
+        json_pred[b_idx]['lanes'] = get_lanes_tusimple(seg_out, json_pred[b_idx]['h_samples'], test_loader2.dataset.samp_factor)
+
+        # write results to file
+        with open(os.path.join(args.output_dir, 'outputs.json'), 'a') as f:
+            json.dump(json_pred[b_idx], f)
+            f.write('\n')
+
+        # create video visualization
+        if True:
+            print('Creating video visualization...')
+            img_out = create_viz(img, seg_out.astype(np.uint8), mask_out, vaf_out, haf_out)
+
+            if out_vid is None:
+                print('Creating video...')
+                out_vid = cv2.VideoWriter(os.path.join(args.output_dir, 'out.mp4'), 
+                    cv2.VideoWriter_fourcc(*'mp4v'), 5, (img_out.shape[1], img_out.shape[0]))
+            print('Writing frame...')
+            out_vid.write(img_out)
+
+        print('Done with image {} out of {}...'.format(min(args.batch_size*(b_idx+1), len(test_loader2.dataset)), len(test_loader2.dataset)))
+
+    # benchmark on TuSimple
+    results = LaneEval.bench_one_submit(os.path.join(args.output_dir, 'outputs.json'), os.path.join(args.manual_path, 'seg_label', 'test.json'))
+    with open(os.path.join(args.output_dir, 'results.json'), 'w') as f:
+        json.dump(results, f)
+
+    if True:
         out_vid.release()
 
     return
@@ -154,9 +240,14 @@ if __name__ == "__main__":
     elif args.backbone == 'enet':
         model = ENet(heads=heads)
 
-    model.load_state_dict(torch.load(args.snapshot), strict=True)
+    model.load_state_dict(torch.load(args.snapshot, map_location='cpu'), strict=True)
     if args.cuda:
         model.cuda()
     print(model)
-
-    test(model)
+    print('Split type is :' + args.split)
+    if args.split == 'manual':
+      print('Manual test started...')
+      testManual(model)
+    else :
+      print('Automatic test started...')
+      test(model)

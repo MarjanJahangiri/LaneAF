@@ -146,7 +146,7 @@ class ERFNet(nn.Module):
     def __init__(self, heads):
         super(ERFNet, self).__init__()
         self.encoder = Encoder(128)
-        checkpoint = torch.load('models/erfnet/erfnet_encoder_pretrained.pth.tar')
+        checkpoint = torch.load('models/erfnet/erfnet_encoder_pretrained.pth.tar', map_location='cpu')
         self.encoder = load_my_state_dict(self.encoder, checkpoint['state_dict'])
 
         # new additions for LaneAF

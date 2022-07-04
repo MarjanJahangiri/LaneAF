@@ -22,6 +22,7 @@ from models.enet.ENet import ENet
 from models.loss import FocalLoss, IoULoss, RegL1Loss
 
 
+
 parser = argparse.ArgumentParser('Options for training LaneAF models in PyTorch...')
 parser.add_argument('--dataset-dir', type=str, default=None, help='path to dataset')
 parser.add_argument('--output-dir', type=str, default=None, help='output directory for model and logs')
@@ -191,35 +192,56 @@ def val(net, epoch):
 
         print('Done with image {} out of {}...'.format(min(args.batch_size*(b_idx+1), len(val_loader.dataset)), len(val_loader.dataset)))
 
-    # now that the epoch is completed calculate statistics and store logs
-    avg_loss_seg = mean(epoch_loss_seg)
-    avg_loss_vaf = mean(epoch_loss_vaf)
-    avg_loss_haf = mean(epoch_loss_haf)
-    avg_loss = mean(epoch_loss)
-    avg_acc = mean(epoch_acc)
-    avg_f1 = mean(epoch_f1)
-    print("\n------------------------ Validation metrics ------------------------")
-    f_log.write("\n------------------------ Validation metrics ------------------------\n")
-    print("Average segmentation loss for epoch = {:.2f}".format(avg_loss_seg))
-    f_log.write("Average segmentation loss for epoch = {:.2f}\n".format(avg_loss_seg))
-    print("Average VAF loss for epoch = {:.2f}".format(avg_loss_vaf))
-    f_log.write("Average VAF loss for epoch = {:.2f}\n".format(avg_loss_vaf))
-    print("Average HAF loss for epoch = {:.2f}".format(avg_loss_haf))
-    f_log.write("Average HAF loss for epoch = {:.2f}\n".format(avg_loss_haf))
-    print("Average loss for epoch = {:.2f}".format(avg_loss))
-    f_log.write("Average loss for epoch = {:.2f}\n".format(avg_loss))
-    print("Average accuracy for epoch = {:.4f}".format(avg_acc))
-    f_log.write("Average accuracy for epoch = {:.4f}\n".format(avg_acc))
-    print("Average F1 score for epoch = {:.4f}".format(avg_f1))
-    f_log.write("Average F1 score for epoch = {:.4f}\n".format(avg_f1))
-    print("--------------------------------------------------------------------\n")
-    f_log.write("--------------------------------------------------------------------\n\n")
 
+
+    try:
+        # now that the epoch is completed calculate statistics and store logs
+        avg_loss_seg = mean(epoch_loss_seg)
+        avg_loss_vaf = mean(epoch_loss_vaf)
+        avg_loss_haf = mean(epoch_loss_haf)
+        avg_loss = mean(epoch_loss)
+        avg_acc = mean(epoch_acc)
+        avg_f1 = mean(epoch_f1)
+        print("\n------------------------ Validation metrics ------------------------")
+        f_log.write("\n------------------------ Validation metrics ------------------------\n")
+        print("Average segmentation loss for epoch = {:.2f}".format(avg_loss_seg))
+        f_log.write("Average segmentation loss for epoch = {:.2f}\n".format(avg_loss_seg))
+        print("Average VAF loss for epoch = {:.2f}".format(avg_loss_vaf))
+        f_log.write("Average VAF loss for epoch = {:.2f}\n".format(avg_loss_vaf))
+        print("Average HAF loss for epoch = {:.2f}".format(avg_loss_haf))
+        f_log.write("Average HAF loss for epoch = {:.2f}\n".format(avg_loss_haf))
+        print("Average loss for epoch = {:.2f}".format(avg_loss))
+        f_log.write("Average loss for epoch = {:.2f}\n".format(avg_loss))
+        print("Average accuracy for epoch = {:.4f}".format(avg_acc))
+        f_log.write("Average accuracy for epoch = {:.4f}\n".format(avg_acc))
+        print("Average F1 score for epoch = {:.4f}".format(avg_f1))
+        f_log.write("Average F1 score for epoch = {:.4f}\n".format(avg_f1))
+        print("--------------------------------------------------------------------\n")
+        f_log.write("--------------------------------------------------------------------\n\n")
+    except BaseException as err:
+        print("An exception occurred in calculate statistics and store logs")
+    
     # now save the model if it has a better F1 score than the best model seen so forward
-    if avg_f1 > best_f1:
-        # save the model
-        torch.save(model.state_dict(), os.path.join(args.output_dir, 'net_' + '%.4d' % (epoch,) + '.pth'))
-        best_f1 = avg_f1
+    try:
+        
+        print("Saving prcessed model...")
+       
+         # now save the model if it has a better F1 score than the best model seen so forward
+        if avg_f1 > best_f1:
+         # save the model
+            net_save_path = os.path.join(args.output_dir, 'net_' + '%.4d' % (epoch,) + '.pth')
+            print("Save model started in path " + net_save_path)
+            torch.save(model.state_dict(), net_save_path)
+            best_f1 = avg_f1
+            print("Save model finished in path " + net_save_path)
+    except OSError as err:
+        print("OS error: {0}".format(err))
+    except ValueError:
+        print("Could not convert data to an integer.")
+    except BaseException as err:
+        print("Unexpected", err)
+        print("An exception occurred in save model")
+   
 
     return avg_loss_seg, avg_loss_vaf, avg_loss_haf, avg_loss, avg_acc, avg_f1
 
@@ -251,7 +273,7 @@ if __name__ == "__main__":
         criterion_1 = torch.nn.BCEWithLogitsLoss()
     elif args.loss_type == 'wbce':
         ## BCE weight
-        criterion_1 = torch.nn.BCEWithLogitsLoss(pos_weight=torch.tensor([9.6]).cuda())
+        criterion_1 = torch.nn.BCEWithLogitsLoss(pos_weight=torch.tensor([9.6]).cpu())
     criterion_2 = IoULoss()
     criterion_reg = RegL1Loss()
 

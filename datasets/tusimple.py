@@ -1,3 +1,5 @@
+from genericpath import isfile
+from math import fabs
 import os
 import shutil
 import glob
@@ -15,6 +17,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
 from utils.affinity_fields import generateAFs
+
 import datasets.transforms as tf
 
 
@@ -26,6 +29,7 @@ def coord_op_to_ip(x, y, scale):
         y = int(scale*y+16)
     return x, y
 
+
 def coord_ip_to_op(x, y, scale):
     # (1280, 720) --> (1280, 720-16=704) --> (1280/scale, 704/scale)
     if x is not None:
@@ -34,8 +38,9 @@ def coord_ip_to_op(x, y, scale):
         y = int((y-16)/scale)
     return x, y
 
+
 def get_lanes_tusimple(seg_out, h_samples, samp_factor):
-    pred_ids = np.unique(seg_out[seg_out > 0]) # find unique pred ids
+    pred_ids = np.unique(seg_out[seg_out > 0])  # find unique pred ids
     # sort lanes based on their size
     lane_num_pixels = [np.sum(seg_out == ids) for ids in pred_ids]
     ret_lane_ids = pred_ids[np.argsort(lane_num_pixels)[::-1]]
@@ -73,6 +78,7 @@ def get_lanes_tusimple(seg_out, h_samples, samp_factor):
             print("Lane too small, discarding...")
     return lanes
 
+
 class TuSimple(Dataset):
     def __init__(self, path, image_set='train', random_transforms=False):
         super(TuSimple, self).__init__()
@@ -84,21 +90,27 @@ class TuSimple(Dataset):
         self.image_set = image_set
         self.random_transforms = random_transforms
         # normalization transform for input images
-        self.mean = [0.485, 0.456, 0.406] #[103.939, 116.779, 123.68]
-        self.std = [0.229, 0.224, 0.225] #[1, 1, 1]
+        self.mean = [0.485, 0.456, 0.406]  # [103.939, 116.779, 123.68]
+        self.std = [0.229, 0.224, 0.225]  # [1, 1, 1]
         self.ignore_label = 255
         if self.random_transforms:
             self.transforms = transforms.Compose([
-                tf.GroupRandomScale(size=(0.5, 0.6), interpolation=(cv2.INTER_LINEAR, cv2.INTER_NEAREST)),
-                tf.GroupRandomCropRatio(size=(self.input_size[1], self.input_size[0])),
+                tf.GroupRandomScale(size=(0.5, 0.6), interpolation=(
+                    cv2.INTER_LINEAR, cv2.INTER_NEAREST)),
+                tf.GroupRandomCropRatio(
+                    size=(self.input_size[1], self.input_size[0])),
                 tf.GroupRandomHorizontalFlip(),
-                tf.GroupRandomRotation(degree=(-1, 1), interpolation=(cv2.INTER_LINEAR, cv2.INTER_NEAREST), padding=(self.mean, (self.ignore_label, ))),
-                tf.GroupNormalize(mean=(self.mean, (0, )), std=(self.std, (1, ))),
+                tf.GroupRandomRotation(degree=(-1, 1), interpolation=(
+                    cv2.INTER_LINEAR, cv2.INTER_NEAREST), padding=(self.mean, (self.ignore_label, ))),
+                tf.GroupNormalize(mean=(self.mean, (0, )),
+                                  std=(self.std, (1, ))),
             ])
         else:
             self.transforms = transforms.Compose([
-                tf.GroupRandomScale(size=(0.5, 0.5), interpolation=(cv2.INTER_LINEAR, cv2.INTER_NEAREST)),
-                tf.GroupNormalize(mean=(self.mean, (0, )), std=(self.std, (1, ))),
+                tf.GroupRandomScale(size=(0.5, 0.5), interpolation=(
+                    cv2.INTER_LINEAR, cv2.INTER_NEAREST)),
+                tf.GroupNormalize(mean=(self.mean, (0, )),
+                                  std=(self.std, (1, ))),
             ])
 
         self.create_index()
@@ -107,25 +119,34 @@ class TuSimple(Dataset):
         self.img_list = []
         self.seg_list = []
 
-        listfile = os.path.join(self.data_dir_path, "seg_label", "list", "{}_gt.txt".format(self.image_set))
+        listfile = os.path.join(
+            self.data_dir_path, "seg_label", "list", "{}_gt.txt".format(self.image_set))
+        print(listfile)
         if not os.path.exists(listfile):
-            raise FileNotFoundError("List file doesn't exist. Label has to be generated! ...")
+            raise FileNotFoundError(
+                "List file doesn't exist. Label has to be generated! ...")
 
         with open(listfile) as f:
             for line in f:
                 line = line.strip()
                 l = line.split(" ")
-                self.img_list.append(os.path.join(self.data_dir_path, l[0][1:]))  # l[0][1:]  get rid of the first '/' so as for os.path.join
-                self.seg_list.append(os.path.join(self.data_dir_path, l[1][1:]))
+                # l[0][1:]  get rid of the first '/' so as for os.path.join
+                self.img_list.append(os.path.join(
+                    self.data_dir_path, l[0][1:]))
+                self.seg_list.append(os.path.join(
+                    self.data_dir_path, l[1][1:]))
 
     def __getitem__(self, idx):
-        img = cv2.imread(self.img_list[idx]).astype(np.float32)/255. # (H, W, 3)
+        img = cv2.imread(self.img_list[idx]).astype(
+            np.float32)/255.  # (H, W, 3)
         img = cv2.cvtColor(img[16:, :, :], cv2.COLOR_BGR2RGB)
         if os.path.exists(self.seg_list[idx]):
-            seg = cv2.imread(self.seg_list[idx], cv2.IMREAD_UNCHANGED) # (H, W, 3)        
+            seg = cv2.imread(self.seg_list[idx],
+                             cv2.IMREAD_UNCHANGED)  # (H, W, 3)
             seg = seg[16:, :, :]
             img, seg = self.transforms((img, seg))
-            seg = cv2.resize(seg, None, fx=self.output_scale, fy=self.output_scale, interpolation=cv2.INTER_NEAREST)
+            seg = cv2.resize(seg, None, fx=self.output_scale,
+                             fy=self.output_scale, interpolation=cv2.INTER_NEAREST)
             # create binary mask
             mask = seg[:, :, 0].copy()
             mask[seg[:, :, 0] >= 1] = 1
@@ -138,19 +159,41 @@ class TuSimple(Dataset):
 
             # convert all outputs to torch tensors
             img = torch.from_numpy(img).permute(2, 0, 1).contiguous().float()
-            seg = torch.from_numpy(seg[:, :, 0]).contiguous().long().unsqueeze(0)
+            seg = torch.from_numpy(
+                seg[:, :, 0]).contiguous().long().unsqueeze(0)
             mask = torch.from_numpy(mask).contiguous().float().unsqueeze(0)
             af = torch.from_numpy(af).permute(2, 0, 1).contiguous().float()
-        else: # if labels not available, set ground truth tensors to nan values
+        else:  # if labels not available, set ground truth tensors to nan values
             img, _ = self.transforms((img, img))
             # convert all outputs to torch tensors
             img = torch.from_numpy(img).permute(2, 0, 1).contiguous().float()
-            seg, mask, af = torch.tensor(float('nan')), torch.tensor(float('nan')), torch.tensor(float('nan'))
+            seg, mask, af = torch.tensor(float('nan')), torch.tensor(
+                float('nan')), torch.tensor(float('nan'))
 
         return img, seg, mask, af
 
     def __len__(self):
         return len(self.img_list)
+
+
+def _gen_json_for_clips(data_dir, clips_dir, json_file):
+    """
+    Generate a json file for the clips.
+    """
+    # get the list of images
+    # onlyfiles = [f for f in os.listdir(data_dir) if os.path.isfile(os.path.join(data_dir, f))]
+    clips_path = os.path.join(data_dir, clips_dir)
+    print("Generating json file for clips in path : " + clips_path)
+    with open(os.path.join(data_dir, json_file), "w") as outfile:
+        for root, dirs, files in os.walk(clips_path):
+            for f in files:
+                # print os.path.relpath(os.path.join(root, f), ".")
+                if f.endswith(".jpg"):
+                    line = os.path.relpath(os.path.join(root, f), data_dir)
+                    outfile.write(
+                        '{{"lanes": [[-2], [-2], [-2], [-2]], "h_samples": [-2], "raw_file": "{}"}}\n'.format(line))
+    print("Generating json file for clips in path : " + clips_path + " done!")
+
 
 def _gen_label_for_json(data_dir_path, image_set):
     H, W = 720, 1280
@@ -158,9 +201,11 @@ def _gen_label_for_json(data_dir_path, image_set):
     save_dir = "seg_label"
 
     os.makedirs(os.path.join(data_dir_path, save_dir, "list"), exist_ok=True)
-    list_f = open(os.path.join(data_dir_path, save_dir, "list", "{}_gt.txt".format(image_set)), "w")
+    list_f = open(os.path.join(data_dir_path, save_dir,
+                  "list", "{}_gt.txt".format(image_set)), "w")
 
-    json_path = os.path.join(data_dir_path, save_dir, "{}.json".format(image_set))
+    json_path = os.path.join(data_dir_path, save_dir,
+                             "{}.json".format(image_set))
     with open(json_path) as f:
         for line in f:
             label = json.loads(line)
@@ -168,12 +213,14 @@ def _gen_label_for_json(data_dir_path, image_set):
             # ---------- clean and sort lanes -------------
             lanes = []
             _lanes = []
-            slope = [] # identify 1st, 2nd, 3rd, 4th lane through slope
+            slope = []  # identify 1st, 2nd, 3rd, 4th lane through slope
             for i in range(len(label['lanes'])):
-                l = [(x, y) for x, y in zip(label['lanes'][i], label['h_samples']) if x >= 0]
-                if (len(l)>1):
+                l = [(x, y) for x, y in zip(label['lanes']
+                                            [i], label['h_samples']) if x >= 0]
+                if (len(l) > 1):
                     _lanes.append(l)
-                    slope.append(np.arctan2(l[-1][1]-l[0][1], l[0][0]-l[-1][0]) / np.pi * 180)
+                    slope.append(np.arctan2(
+                        l[-1][1]-l[0][1], l[0][0]-l[-1][0]) / np.pi * 180)
             _lanes = [_lanes[i] for i in np.argsort(slope)]
             slope = [slope[i] for i in np.argsort(slope)]
 
@@ -182,9 +229,9 @@ def _gen_label_for_json(data_dir_path, image_set):
             idx_3 = None
             idx_4 = None
             for i in range(len(slope)):
-                if slope[i]<=90:
+                if slope[i] <= 90:
                     idx_2 = i
-                    idx_1 = i-1 if i>0 else None
+                    idx_1 = i-1 if i > 0 else None
                 else:
                     idx_3 = i
                     idx_4 = i+1 if i+1 < len(slope) else None
@@ -204,16 +251,20 @@ def _gen_label_for_json(data_dir_path, image_set):
                     list_str.append('0')
                     continue
                 for j in range(len(coords)-1):
-                    cv2.line(seg_img, coords[j], coords[j+1], (i+1, i+1, i+1), SEG_WIDTH//2)
+                    cv2.line(seg_img, coords[j], coords[j+1],
+                             (i+1, i+1, i+1), SEG_WIDTH//2)
                 list_str.append('1')
 
             seg_path = img_path.split("/")
-            seg_path, img_name = os.path.join(data_dir_path, save_dir, seg_path[1], seg_path[2]), seg_path[3]
+            print(seg_path)
+            seg_path, img_name = os.path.join(
+                data_dir_path, save_dir, seg_path[1], seg_path[2]), seg_path[3]
             os.makedirs(seg_path, exist_ok=True)
             seg_path = os.path.join(seg_path, img_name[:-3]+"png")
             cv2.imwrite(seg_path, seg_img)
 
-            seg_path = "/".join([save_dir, *img_path.split("/")[1:3], img_name[:-3]+"png"])
+            seg_path = "/".join([save_dir, *img_path.split("/")
+                                [1:3], img_name[:-3]+"png"])
             if seg_path[0] != '/':
                 seg_path = '/' + seg_path
             if img_path[0] != '/':
@@ -225,7 +276,8 @@ def _gen_label_for_json(data_dir_path, image_set):
 
     list_f.close()
 
-def generate_labels(dataset_dir):
+
+def generate_labels(dataset_dir, manual_test):
     """
     image_set is split into three partitions: train, val, test.
     train includes label_data_0313.json, label_data_0601.json
@@ -236,23 +288,33 @@ def generate_labels(dataset_dir):
     VAL_SET = ['label_data_0531.json']
     TEST_SET = ['test_label.json']
     save_dir = os.path.join(dataset_dir, "seg_label")
+    print("Dataset path is: " + dataset_dir)
     if os.path.exists(save_dir):
         print("Deleting existing label directory...")
         shutil.rmtree(save_dir)
     os.makedirs(save_dir, exist_ok=True)
+    if manual_test == False:
+        # --------- merge json into one file ---------
+        with open(os.path.join(save_dir, "train.json"), "w") as outfile:
+            for json_name in TRAIN_SET:
+                with open(os.path.join(dataset_dir, json_name)) as infile:
+                    for line in infile:
+                        outfile.write(line)
 
-    # --------- merge json into one file ---------
-    with open(os.path.join(save_dir, "train.json"), "w") as outfile:
-        for json_name in TRAIN_SET:
-            with open(os.path.join(dataset_dir, json_name)) as infile:
-                for line in infile:
-                    outfile.write(line)
-
-    with open(os.path.join(save_dir, "val.json"), "w") as outfile:
-        for json_name in VAL_SET:
-            with open(os.path.join(dataset_dir, json_name)) as infile:
-                for line in infile:
-                    outfile.write(line)
+        with open(os.path.join(save_dir, "val.json"), "w") as outfile:
+            for json_name in VAL_SET:
+                with open(os.path.join(dataset_dir, json_name)) as infile:
+                    for line in infile:
+                        outfile.write(line)
+        print("Generating labels for train & vall set")
+        _gen_label_for_json(dataset_dir, 'train')
+        print("Finished generating labels for train set")
+        _gen_label_for_json(dataset_dir, 'val')
+        print("Finished generating labels for val set")
+    else:
+        # clips_dir = os.path.join(dataset_dir, "clips")
+        _gen_json_for_clips(dataset_dir,"clips", 'test_label.json')
+        print("Generating manual labels for test set from images")
 
     with open(os.path.join(save_dir, "test.json"), "w") as outfile:
         for json_name in TEST_SET:
@@ -260,18 +322,16 @@ def generate_labels(dataset_dir):
                 for line in infile:
                     outfile.write(line)
 
-    _gen_label_for_json(dataset_dir, 'train')
-    print("Finished generating labels for train set")
-    _gen_label_for_json(dataset_dir, 'val')
-    print("Finished generating labels for val set")
     _gen_label_for_json(dataset_dir, 'test')
     print("Finished generating labels for test set")
 
+
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Generate and store labels for entire dataset')
+    parser = argparse.ArgumentParser(
+        description='Generate and store labels for entire dataset')
     parser.add_argument('-o', '--dataset-dir', default='/home/akshay/data/TuSimple',
                         help='The dataset directory ["/path/to/TuSimple"]')
 
     args = parser.parse_args()
     print('Creating labels...')
-    generate_labels(args.dataset_dir)
+    generate_labels(args.dataset_dir, False)
