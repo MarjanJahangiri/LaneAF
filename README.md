@@ -83,7 +83,7 @@ Config files, logs, results and snapshots from running the above scripts will be
 Trained LaneAF models can be run on the TuSimple test set as follows:
 ```shell
 source activate laneaf # activate virtual environment
-python infer_tusimple.py --dataset-dir=./path/to/TuSimple/ --split=manual --manual-path=./manual-path/  --snapshot=./path/to/trained/model/name of trained mode.pth --save-viz
+python infer_tusimple.py --dataset-dir=./path/to/TuSimple/ --split=manual --manual-path=./manual-path/  --snapshot=./path/to/trained/model/name of trained model.pth --save-viz
 
 source deactivate # exit virtual environment
 ```
