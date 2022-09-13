@@ -5,10 +5,8 @@
 
 
 # Outputs(DLA-34):
-![DLA34](DLA-34-1.JPG)
-![DLA34](DLA-34-2.JPG)
-![DLA34](DLA-34-3.JPG)
-![DLA34](DLA-34-4.JPG)
+![DLA34](DLA34.JPG)
+
 
 
 
