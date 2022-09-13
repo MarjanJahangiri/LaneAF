@@ -4,7 +4,7 @@
 
 
 
-# Outputs(DLA-34):<span style="color:red"></span>
+<font color="green"> # Outputs(DLA-34): </font>
 ![DLA34](DLA34.JPG)
 
 
