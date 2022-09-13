@@ -7,7 +7,7 @@
 [Paper link](http://cvrr.ucsd.edu/publications/2021/LaneAF.pdf)
 
 
-(DLA-34-1.JPG)
+![DLA34](DLA-34-1.JPG)
 ![HAF](assets/result_zoomed_HAF.png)
 
 ## Overview
