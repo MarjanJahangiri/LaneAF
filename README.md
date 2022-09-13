@@ -85,6 +85,9 @@ Trained LaneAF models can be run on the TuSimple test set as follows:
 source activate laneaf # activate virtual environment
 python infer_tusimple.py --dataset-dir=./path/to/TuSimple/ --split=manual --manual-path=./manual-path/  --snapshot=./path/to/trained/model/name of trained model.pth --save-viz
 
+For example for me:
+python infer_tusimple.py --dataset-dir=./data/tusimple --split=manual --manual-path=./test/data  --snapshot=./experiments/tusimple/2022-08-14-08_28/net_0003.pth --save-viz
+
 source deactivate # exit virtual environment
 ```
 This will generate outputs in the TuSimple format and also produce benchmark metrics using their [official implementation](https://github.com/TuSimple/tusimple-benchmark/tree/master/doc/lane_detection).
