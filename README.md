@@ -1,6 +1,4 @@
-[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/laneaf-robust-multi-lane-detection-with/lane-detection-on-culane)](https://paperswithcode.com/sota/lane-detection-on-culane?p=laneaf-robust-multi-lane-detection-with)
 
-[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/laneaf-robust-multi-lane-detection-with/lane-detection-on-llamas)](https://paperswithcode.com/sota/lane-detection-on-llamas?p=laneaf-robust-multi-lane-detection-with)
 
 # LaneAF: Robust Multi-Lane Detection with Affinity Fields
 
