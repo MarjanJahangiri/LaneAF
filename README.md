@@ -19,10 +19,8 @@
 ## Overview
 1) [Installation](#installation)
 2) [TuSimple](#tusimple)
-3) [CULane](#culane)
-4) [Unsupervised Llamas](#unsupervised-llamas)
-5) [Pre-trained Weights](#pre-trained-weights)
-5) [Citation](#citation)
+3) [Pre-trained Weights](#pre-trained-weights)
+4) [Citation](#citation)
 
 ## Installation
 1) Clone this repository
