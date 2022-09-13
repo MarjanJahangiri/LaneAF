@@ -92,7 +92,7 @@ This will generate outputs in the TuSimple format and also produce benchmark met
 
 
 ## Pre-trained Weights 
-You can download our pre-trained model weights using [this link](https://drive.google.com/file/d/1GJoVQfDyxhUT8Y5EqTRV9PX3WWckfxWG/view?usp=sharing).
+You can download the writer's pre-trained model weights using [this link](https://drive.google.com/file/d/1GJoVQfDyxhUT8Y5EqTRV9PX3WWckfxWG/view?usp=sharing).
 
 ## Citation
 If you find our code and/or models useful in your research, please consider citing the following papers:
