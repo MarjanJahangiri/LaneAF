@@ -4,7 +4,7 @@
 
 # LaneAF: Robust Multi-Lane Detection with Affinity Fields
 
-[Paper link](http://cvrr.ucsd.edu/publications/2021/LaneAF.pdf)
+# [Paper link](http://cvrr.ucsd.edu/publications/2021/LaneAF.pdf)
 
 
 # Outputs:
