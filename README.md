@@ -2,7 +2,7 @@
 
 # LaneAF: Robust Multi-Lane Detection with Affinity Fields
 
-You can download paper using https://paperswithcode.com/paper/laneaf-robust-multi-lane-detection-with
+You can download the paper using https://paperswithcode.com/paper/laneaf-robust-multi-lane-detection-with
 
 
 
