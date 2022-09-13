@@ -8,7 +8,11 @@
 
 
 ![DLA34](DLA-34-1.JPG)
-![HAF](assets/result_zoomed_HAF.png)
+![DLA34](DLA-34-2.JPG)
+![DLA34](DLA-34-3.JPG)
+![DLA34](DLA-34-4.JPG)
+
+
 
 ## Overview
 1) [Installation](#installation)
