@@ -108,8 +108,5 @@ If you find our code and/or models useful in your research, please consider citi
     }
    
    You can find writer github using: https://github.com/sel118/LaneAF
-   
-   ## Owner Github linke 
-
-You can find writer github using: https://github.com/sel118/LaneAF
+  
 
