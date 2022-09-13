@@ -5,6 +5,7 @@
 
 ```diff
 - Outputs(DLA-34):
+```diff
 ![DLA34](DLA34.JPG)
 
 
