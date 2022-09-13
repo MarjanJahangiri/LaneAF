@@ -3,8 +3,8 @@
 # LaneAF: Robust Multi-Lane Detection with Affinity Fields
 
 
-
-# Outputs(DLA-34):
+```diff
+- Outputs(DLA-34):
 ![DLA34](DLA34.JPG)
 
 
