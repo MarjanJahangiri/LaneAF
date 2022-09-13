@@ -7,7 +7,7 @@
 [Paper link](http://cvrr.ucsd.edu/publications/2021/LaneAF.pdf)
 
 
-[Outputs:]
+# Outputs:
 ![DLA34](DLA-34-1.JPG)
 ![DLA34](DLA-34-2.JPG)
 ![DLA34](DLA-34-3.JPG)
