@@ -4,7 +4,7 @@
 
 
 
-<font color="green"> # Outputs(DLA-34): </font>
+# Outputs(DLA-34):
 ![DLA34](DLA34.JPG)
 
 
