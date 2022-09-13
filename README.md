@@ -6,7 +6,6 @@
 
 [Paper link](http://cvrr.ucsd.edu/publications/2021/LaneAF.pdf)
 
-[Video results](https://youtube.com/playlist?list=PLUebh5NWCQUZv8IXYOVNM5SuRYQzScW5P)
 
 ![VAF](assets/result_zoomed_VAF.png)
 ![HAF](assets/result_zoomed_HAF.png)
